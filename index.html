@@ -527,8 +527,8 @@ document.getElementById('inviteUrl').value = location.href;
 const key   = k => `imaco_${room}_${k}`;
 const load  = (k, d) => { try { const v = localStorage.getItem(key(k)); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
 const save  = (k, v) => { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch {} };
-const gload = (k, d) => { try { const v = localStorage.getItem(`imaco_${k}`); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
-const gsave = (k, v) => { try { localStorage.setItem(`imaco_${k}`, JSON.stringify(v)); } catch {} };
+const gload = (k, d) => { try { const v = localStorage.getItem(`imaco_global_${k}`); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
+const gsave = (k, v) => { try { localStorage.setItem(`imaco_global_${k}`, JSON.stringify(v)); } catch {} };
 
 // ── 状態 ──
 let myName    = load('myName', '');
@@ -775,7 +775,7 @@ const initSupabase = async (url, anonKey) => {
     syncReady = true;
     document.getElementById('cfgStatus').textContent = '✓ 接続中';
     document.getElementById('cfgStatus').classList.add('ok');
-    document.getElementById('cfgRow').style.display = 'none';
+    document.getElementById('cfgBtn') && (document.getElementById('cfgBtn').textContent = '再接続');
     await ensureRoom();
     await pullThemStatus();
     startRealtime();
@@ -889,6 +889,9 @@ const notifyThemChange = (newStatus) => {
 };
 
 // ── 起動 ──
+// 古いキー（naco-timerと競合するもの）をクリア
+['SUPABASE_ANON_KEY','SUPABASE_KEY','SUPABASE_REMEMBER_KEY','SUPABASE_URL'].forEach(k => localStorage.removeItem(k));
+
 const storedUrl = gload('sb_url',''), storedKey = gload('sb_key','');
 if (storedUrl && storedKey) {
   document.getElementById('cfgUrl').value = storedUrl;
