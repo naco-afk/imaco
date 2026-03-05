@@ -344,6 +344,28 @@ body {
 .invite-copy:hover { background: var(--border); }
 
 .hint { font-size: 11px; color: var(--sub); }
+
+/* 接続済みバッジ */
+.cfg-connected {
+  max-width: 720px; width: 100%;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 10px 16px;
+  font-size: 12px; font-weight: 700; color: var(--sub);
+  transition: background .25s, border-color .25s;
+}
+.cfg-connected-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+.cfg-connected-edit {
+  margin-left: auto;
+  background: transparent; border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 4px 10px;
+  font-size: 11px; font-weight: 800; font-family: inherit;
+  color: var(--sub); cursor: pointer; transition: all .15s;
+}
+.cfg-connected-edit:hover { border-color: var(--ink); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -454,6 +476,13 @@ body {
   <span class="cfg-status" id="cfgStatus">未接続</span>
 </div>
 
+<!-- 接続済みバッジ（接続後に表示） -->
+<div class="cfg-connected" id="cfgConnected" style="display:none">
+  <span class="cfg-connected-dot"></span>
+  <span>Supabase 接続済み</span>
+  <button class="cfg-connected-edit" onclick="showCfgRow()">変更</button>
+</div>
+
 <p class="hint" id="hintTxt">URLをコピーして相手に送るとリアルタイム共有できます</p>
 
 <!-- トースト -->
@@ -465,7 +494,7 @@ body {
     <div class="modal-ttl">👋 はじめまして！</div>
     <div class="onboard-ava-row">
       <div class="onboard-ava-preview" id="onboardAvaPreview" onclick="document.getElementById('onboardFileInp').click()">🐱
-        <input type="file" accept="image/*" id="onboardFileInp" style="display:none" onchange="handleOnboardUpload(event)">
+        <input type="file" accept="image/*" id="onboardFileInp" style="display:none" >
       </div>
       <div class="onboard-ava-hint">
         <strong>アイコンを選ぼう</strong>
@@ -487,7 +516,7 @@ body {
   <div class="modal">
     <div class="modal-ttl">🖼 アイコンを変更</div>
     <div class="upload-area">
-      <input type="file" accept="image/*" id="iconFileInp" onchange="handleIconUpload(event)">
+      <input type="file" accept="image/*" id="iconFileInp" >
       <div class="upload-area-txt">タップして<strong>写真をアップロード</strong></div>
     </div>
     <div class="divider-or">または絵文字から選ぶ</div>
@@ -719,14 +748,32 @@ const buildAGrid = (gridId) => {
 };
 buildAGrid('iconAgrid');
 
-window.openIconModal = () => { selAva = null; pendingImg = null; document.getElementById('ovIcon').classList.add('open'); };
+window.openIconModal = () => {
+  selAva = null; pendingImg = null;
+  const fileInp = document.getElementById('iconFileInp');
+  if (fileInp) fileInp.value = '';
+  const uploadTxt = document.querySelector('#ovIcon .upload-area-txt');
+  if (uploadTxt) uploadTxt.innerHTML = 'タップして<strong>写真をアップロード</strong>';
+  document.getElementById('ovIcon').classList.add('open');
+};
 window.closeIcon = () => document.getElementById('ovIcon').classList.remove('open');
 window.handleIconUpload = e => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => { pendingImg = ev.target.result; selAva = null; document.getElementById('iconAgrid').querySelectorAll('.ap').forEach(x=>x.classList.remove('sel')); };
+  reader.onload = ev => {
+    pendingImg = ev.target.result;
+    selAva = null;
+    document.getElementById('iconAgrid').querySelectorAll('.ap').forEach(x=>x.classList.remove('sel'));
+    // プレビュー表示
+    const uploadTxt = document.querySelector('#ovIcon .upload-area-txt');
+    if (uploadTxt) uploadTxt.innerHTML = `<img src="${pendingImg}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:50%;">`;
+  };
   reader.readAsDataURL(file);
 };
+
+// onchange属性はtype="module"から参照できないので直接登録
+document.getElementById('iconFileInp').addEventListener('change', e => window.handleIconUpload(e));
+document.getElementById('onboardFileInp').addEventListener('change', e => window.handleOnboardUpload(e));
 window.doIcon = () => {
   if (pendingImg || selAva) {
     myAvatar = pendingImg || selAva;
@@ -760,6 +807,11 @@ window.doAdd = () => {
 };
 
 // ── Supabase ──
+window.showCfgRow = () => {
+  document.getElementById('cfgRow').style.display = 'flex';
+  document.getElementById('cfgConnected').style.display = 'none';
+};
+
 window.connectSupabase = async () => {
   const url = document.getElementById('cfgUrl').value.trim();
   const anonKey = document.getElementById('cfgKey').value.trim();
@@ -776,6 +828,8 @@ const initSupabase = async (url, anonKey) => {
     document.getElementById('cfgStatus').textContent = '✓ 接続中';
     document.getElementById('cfgStatus').classList.add('ok');
     document.getElementById('cfgBtn') && (document.getElementById('cfgBtn').textContent = '再接続');
+    document.getElementById('cfgRow').style.display = 'none';
+    document.getElementById('cfgConnected').style.display = 'flex';
     await ensureRoom();
     await pullThemStatus();
     startRealtime();
