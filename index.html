@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>imaco — 今が、見える。</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root, [data-theme="light"] {
+  --bg:       #eeeae4;
+  --card:     #faf8f5;
+  --border:   #ddd8d0;
+  --ink:      #28231e;
+  --sub:      #a09890;
+  --off:      #ede9e2;
+  --dot-card: #faf8f5;
+  --green:    #5ecb78;
+  --yellow:   #f5c842;
+}
+[data-theme="dark"] {
+  --bg:       #1a1816;
+  --card:     #242120;
+  --border:   #353230;
+  --ink:      #f0ece6;
+  --sub:      #7a736c;
+  --off:      #2e2b29;
+  --dot-card: #242120;
+  --green:    #5ecb78;
+  --yellow:   #f5c842;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  gap: 10px;
+  transition: background .25s;
+}
+
+/* ── ヘッダー ── */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 50;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(238,234,228,.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  transition: background .25s;
+}
+[data-theme="dark"] .app-header { background: rgba(26,24,22,.88); }
+
+.header-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 17px; font-weight: 900; color: var(--ink);
+}
+.logo-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--ink); display: flex; align-items: center; justify-content: center;
+  transition: background .25s;
+}
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.hbtn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--card);
+  color: var(--ink); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.hbtn:hover { transform: scale(1.08); }
+
+/* ── メインシーン ── */
+.scene {
+  display: flex; align-items: center;
+  max-width: 720px; width: 100%;
+  margin-top: 64px;
+}
+
+/* ── カード ── */
+.card {
+  flex: 1; min-width: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 4px 28px rgba(0,0,0,.07), 0 1px 4px rgba(0,0,0,.04);
+  padding: 20px 18px 18px;
+  display: flex; flex-direction: column; gap: 13px;
+  transition: background .25s, border-color .25s, box-shadow .25s;
+}
+.card.you  { border-radius: 24px 14px 14px 24px; }
+.card.them { border-radius: 14px 24px 24px 14px; }
+
+/* ── 中央コネクター ── */
+.connector {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; padding: 0 10px; flex-shrink: 0;
+}
+.conn-icon {
+  font-size: 16px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  transition: background .25s, border-color .25s;
+}
+.conn-count { font-size: 11px; font-weight: 800; color: var(--sub); }
+
+/* ── ヘッダー ── */
+.card-head { display: flex; align-items: center; gap: 10px; }
+.ava-wrap  { position: relative; flex-shrink: 0; }
+.ava {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; overflow: hidden; user-select: none;
+  transition: opacity .15s;
+}
+.ava.editable { cursor: pointer; }
+.ava.editable:hover { opacity: .75; }
+.ava-you  { background: #fde8e8; }
+.ava-them { background: #e4edff; }
+.ava img  { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid var(--dot-card);
+  transition: border-color .25s;
+}
+.dot-on   { background: var(--green); }
+.dot-idle { background: var(--yellow); }
+.dot-off  { background: #888; }
+
+.name-wrap { flex: 1; min-width: 0; }
+.name-row  { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+.name-row:hover .pencil { opacity: 1; }
+.name-txt  { font-size: 13px; font-weight: 800; color: var(--ink); transition: color .25s; }
+.pencil    { font-size: 9px; opacity: 0; transition: opacity .15s; }
+.name-inp  {
+  display: none; font-size: 13px; font-weight: 800; font-family: inherit;
+  color: var(--ink); border: none; border-bottom: 1.5px solid var(--ink);
+  background: transparent; outline: none; width: 100%; max-width: 110px;
+}
+.card-since { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+/* ── 現在ステータス ── */
+.cur {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg); border-radius: 13px; padding: 9px 13px;
+  transition: background .25s;
+}
+.cur-emoji { font-size: 22px; line-height: 1; }
+.cur-label { font-size: 16px; font-weight: 800; color: var(--ink); transition: color .25s; }
+
+/* ── ステータスボタン列 ── */
+.sbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.sbtn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px 6px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  border: 1.5px solid transparent;
+  background: var(--off); color: var(--ink);
+  cursor: pointer;
+  transition: background .12s, transform .12s, color .25s;
+  white-space: nowrap; user-select: none;
+}
+.sbtn:hover { background: var(--border); transform: translateY(-1px); }
+.sbtn.on    { background: var(--ink); color: var(--bg); }
+.sbtn .se   { font-size: 13px; }
+
+.sbtn-plus {
+  width: 31px; height: 31px; border-radius: 50%;
+  border: 1.5px dashed var(--sub); background: transparent;
+  color: var(--sub); font-size: 17px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; font-family: inherit; flex-shrink: 0;
+}
+.sbtn-plus:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); transform: rotate(90deg); }
+.card.them .sbtn, .card.them .sbtn-plus { pointer-events: none; }
+
+/* ── メモ行 ── */
+.memo-row {
+  max-width: 720px; width: 100%;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  transition: background .25s, border-color .25s;
+}
+.memo-lbl { font-size: 11px; font-weight: 800; color: var(--sub); white-space: nowrap; }
+.memo-inp {
+  flex: 1; border: none; background: transparent;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  color: var(--ink); outline: none; min-width: 0;
+}
+.memo-inp::placeholder { color: var(--sub); opacity: .5; }
+
+/* ── Supabase設定行 ── */
+.cfg-row {
+  max-width: 720px; width: 100%;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  transition: background .25s, border-color .25s;
+}
+.cfg-inp {
+  flex: 1; min-width: 160px; padding: 7px 11px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink); background: var(--bg); outline: none;
+  transition: border .12s;
+}
+.cfg-inp:focus { border-color: var(--ink); }
+.cfg-btn {
+  padding: 7px 16px; border-radius: 8px;
+  background: var(--ink); color: var(--bg);
+  font-size: 12px; font-weight: 800; font-family: inherit;
+  border: none; cursor: pointer; white-space: nowrap;
+  transition: opacity .15s;
+}
+.cfg-btn:hover { opacity: .8; }
+.cfg-status { font-size: 11px; font-weight: 800; color: var(--sub); white-space: nowrap; }
+.cfg-status.ok { color: var(--green); }
+
+/* ── トースト ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--ink); color: var(--bg);
+  padding: 10px 20px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  transition: transform .3s ease, opacity .3s;
+  opacity: 0; z-index: 200; white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ── モーダル共通 ── */
+.ov {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.3); backdrop-filter: blur(6px);
+  z-index: 100; align-items: flex-end; justify-content: center; padding: 16px;
+}
+.ov.open { display: flex; }
+.modal {
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 24px; padding: 24px 20px 20px;
+  width: 100%; max-width: 380px;
+  animation: slideUp .22s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(32px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-ttl { font-size: 15px; font-weight: 900; color: var(--ink); margin-bottom: 16px; }
+
+/* オンボーディングモーダル */
+.onboard-ava-row {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+}
+.onboard-ava-preview {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #fde8e8; display: flex; align-items: center;
+  justify-content: center; font-size: 28px; flex-shrink: 0;
+  overflow: hidden; cursor: pointer; transition: opacity .15s;
+}
+.onboard-ava-preview:hover { opacity: .8; }
+.onboard-ava-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.onboard-ava-hint { font-size: 12px; font-weight: 700; color: var(--sub); }
+.onboard-ava-hint strong { color: var(--ink); display: block; font-size: 13px; margin-bottom: 2px; }
+
+.minp {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid var(--border); border-radius: 11px;
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  color: var(--ink); background: var(--bg); outline: none;
+  margin-bottom: 12px; transition: border .12s;
+}
+.minp:focus { border-color: var(--ink); }
+
+/* 絵文字グリッド */
+.egrid, .agrid {
+  display: grid; grid-template-columns: repeat(6,1fr); gap: 5px;
+}
+.ep, .ap {
+  font-size: 20px; text-align: center; padding: 5px;
+  border-radius: 9px; background: var(--off);
+  border: 1.5px solid transparent; cursor: pointer; transition: all .1s;
+}
+.ep:hover,.ep.sel,.ap:hover,.ap.sel { background: var(--ink); transform: scale(1.08); }
+
+.divider-or {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 800; color: var(--sub);
+  margin: 10px 0;
+}
+.divider-or::before, .divider-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.upload-area {
+  border: 1.5px dashed var(--border); border-radius: 11px;
+  padding: 12px; text-align: center; cursor: pointer;
+  transition: all .15s; position: relative; margin-bottom: 10px;
+}
+.upload-area:hover { border-color: var(--ink); background: var(--off); }
+.upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-area-txt { font-size: 12px; font-weight: 700; color: var(--sub); }
+.upload-area-txt strong { color: var(--ink); }
+
+.mbtns { display: flex; gap: 8px; margin-top: 14px; }
+.mbtn  { flex: 1; padding: 11px; border-radius: 11px; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.mbtn-c  { background: transparent; border: 1.5px solid var(--border); color: var(--sub); }
+.mbtn-ok { background: var(--ink); border: none; color: var(--bg); transition: opacity .12s; }
+.mbtn-ok:hover { opacity: .82; }
+
+/* 招待リンク行 */
+.invite-row {
+  max-width: 720px; width: 100%;
+  display: flex; align-items: center; gap: 8px;
+}
+.invite-url {
+  flex: 1; padding: 9px 13px;
+  border: 1.5px solid var(--border); border-radius: 11px;
+  font-size: 12px; font-family: 'Courier New', monospace; font-weight: 600;
+  color: var(--sub); background: var(--card); outline: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.invite-copy {
+  padding: 9px 16px; border-radius: 11px;
+  background: var(--off); border: 1.5px solid var(--border);
+  font-size: 12px; font-weight: 800; font-family: inherit;
+  color: var(--ink); cursor: pointer; white-space: nowrap;
+  transition: background .12s;
+}
+.invite-copy:hover { background: var(--border); }
+
+.hint { font-size: 11px; color: var(--sub); }
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header class="app-header">
+  <div class="header-logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" viewBox="0 0 72 72" fill="none">
+        <circle cx="24" cy="36" r="14" fill="#faf8f5"/>
+        <circle cx="48" cy="36" r="14" fill="#faf8f5" opacity=".5"/>
+        <line x1="38" y1="36" x2="34" y2="36" stroke="#faf8f5" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    imaco
+  </div>
+  <div class="header-actions">
+    <button class="hbtn" id="themeBtn" onclick="toggleTheme()" title="テーマ切替">🌙</button>
+    <button class="hbtn" onclick="copyInvite()" title="招待リンクをコピー">🔗</button>
+  </div>
+</header>
+
+<!-- メインシーン -->
+<div class="scene">
+  <!-- 自分 -->
+  <div class="card you">
+    <div class="card-head">
+      <div class="ava-wrap">
+        <div class="ava ava-you editable" id="avaYou" onclick="openIconModal()" title="アイコン変更"></div>
+        <span class="dot dot-on" id="dotYou"></span>
+      </div>
+      <div class="name-wrap">
+        <div class="name-row" onclick="editName()">
+          <span class="name-txt" id="nameTxtYou">—</span>
+          <span class="pencil">✏️</span>
+        </div>
+        <input class="name-inp" id="nameInpYou" maxlength="12"
+          onblur="saveName()" onkeydown="if(event.key==='Enter')saveName()">
+        <div class="card-since" id="sinceYou">—</div>
+      </div>
+    </div>
+    <div class="cur">
+      <span class="cur-emoji" id="emYou">—</span>
+      <span class="cur-label" id="lbYou">設定中…</span>
+    </div>
+    <div class="sbtns" id="sbtnsYou">
+      <button class="sbtn" data-e="💻" data-l="作業中" onclick="pickStatus(this)"><span class="se">💻</span>作業中</button>
+      <button class="sbtn" data-e="☕" data-l="休憩"   onclick="pickStatus(this)"><span class="se">☕</span>休憩</button>
+      <button class="sbtn" data-e="🚶" data-l="外出"   onclick="pickStatus(this)"><span class="se">🚶</span>外出</button>
+      <button class="sbtn" data-e="🍚" data-l="ご飯"   onclick="pickStatus(this)"><span class="se">🍚</span>ご飯</button>
+      <button class="sbtn" data-e="🌙" data-l="寝てる" onclick="pickStatus(this)"><span class="se">🌙</span>寝てる</button>
+      <button class="sbtn-plus" onclick="openAddModal()">＋</button>
+    </div>
+  </div>
+
+  <!-- コネクター -->
+  <div class="connector">
+    <div class="conn-icon">🔗</div>
+    <div class="conn-count" id="connCount">—</div>
+  </div>
+
+  <!-- 相手 -->
+  <div class="card them">
+    <div class="card-head">
+      <div class="ava-wrap">
+        <div class="ava ava-them" id="avaThem"></div>
+        <span class="dot dot-off" id="dotThem"></span>
+      </div>
+      <div class="name-wrap">
+        <div class="name-row">
+          <span class="name-txt" id="nameTxtThem">待機中…</span>
+        </div>
+        <div class="card-since" id="sinceThem">—</div>
+      </div>
+    </div>
+    <div class="cur">
+      <span class="cur-emoji" id="emThem">👀</span>
+      <span class="cur-label" id="lbThem">まだ来てない</span>
+    </div>
+    <div class="sbtns" id="sbtnsThem">
+      <button class="sbtn" data-e="💻" data-l="作業中"><span class="se">💻</span>作業中</button>
+      <button class="sbtn" data-e="☕" data-l="休憩"  ><span class="se">☕</span>休憩</button>
+      <button class="sbtn" data-e="🚶" data-l="外出"  ><span class="se">🚶</span>外出</button>
+      <button class="sbtn" data-e="🍚" data-l="ご飯"  ><span class="se">🍚</span>ご飯</button>
+      <button class="sbtn" data-e="🌙" data-l="寝てる"><span class="se">🌙</span>寝てる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ひとことメモ -->
+<div class="memo-row">
+  <span class="memo-lbl">ひとこと</span>
+  <input class="memo-inp" id="memoInp" placeholder="今日もよろしく〜 など" maxlength="40"
+    onchange="saveMemo()" onblur="saveMemo()">
+</div>
+
+<!-- 招待リンク -->
+<div class="invite-row">
+  <input class="invite-url" id="inviteUrl" readonly>
+  <button class="invite-copy" onclick="copyInvite()">リンクをコピー</button>
+</div>
+
+<!-- Supabase設定 -->
+<div class="cfg-row" id="cfgRow">
+  <input class="cfg-inp" id="cfgUrl" placeholder="SUPABASE_URL" autocomplete="off">
+  <input class="cfg-inp" id="cfgKey" placeholder="SUPABASE_ANON_KEY" autocomplete="off">
+  <button class="cfg-btn" onclick="connectSupabase()">接続</button>
+  <span class="cfg-status" id="cfgStatus">未接続</span>
+</div>
+
+<p class="hint" id="hintTxt">URLをコピーして相手に送るとリアルタイム共有できます</p>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<!-- オンボーディングモーダル -->
+<div class="ov open" id="ovOnboard">
+  <div class="modal">
+    <div class="modal-ttl">👋 はじめまして！</div>
+    <div class="onboard-ava-row">
+      <div class="onboard-ava-preview" id="onboardAvaPreview" onclick="document.getElementById('onboardFileInp').click()">🐱
+        <input type="file" accept="image/*" id="onboardFileInp" style="display:none" onchange="handleOnboardUpload(event)">
+      </div>
+      <div class="onboard-ava-hint">
+        <strong>アイコンを選ぼう</strong>
+        タップして写真をアップロード<br>または下の絵文字から選ぶ
+      </div>
+    </div>
+    <div class="agrid" id="onboardAgrid"></div>
+    <div style="margin-top:14px;">
+      <input class="minp" id="onboardName" placeholder="あなたの名前（例：みく）" maxlength="12">
+    </div>
+    <div class="mbtns">
+      <button class="mbtn mbtn-ok" onclick="finishOnboard()">はじめる →</button>
+    </div>
+  </div>
+</div>
+
+<!-- アイコン変更モーダル -->
+<div class="ov" id="ovIcon" onclick="if(event.target===this)closeIcon()">
+  <div class="modal">
+    <div class="modal-ttl">🖼 アイコンを変更</div>
+    <div class="upload-area">
+      <input type="file" accept="image/*" id="iconFileInp" onchange="handleIconUpload(event)">
+      <div class="upload-area-txt">タップして<strong>写真をアップロード</strong></div>
+    </div>
+    <div class="divider-or">または絵文字から選ぶ</div>
+    <div class="agrid" id="iconAgrid"></div>
+    <div class="mbtns">
+      <button class="mbtn mbtn-c"  onclick="closeIcon()">キャンセル</button>
+      <button class="mbtn mbtn-ok" onclick="doIcon()">決定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ステータス追加モーダル -->
+<div class="ov" id="ovAdd" onclick="if(event.target===this)closeAdd()">
+  <div class="modal">
+    <div class="modal-ttl">✦ ステータスを追加</div>
+    <div class="egrid" id="addEgrid"></div>
+    <input class="minp" id="addLbl" placeholder="ラベル（例：ジム）" maxlength="10" style="margin-top:12px;">
+    <div class="mbtns">
+      <button class="mbtn mbtn-c"  onclick="closeAdd()">やめる</button>
+      <button class="mbtn mbtn-ok" onclick="doAdd()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ── 定数 ──
+const S_EMOJIS = ["🍜","🍱","🎮","📚","🏃","🛁","😴","🎵","🎨","🛒","🌸","⚡","🔥","💪","🧘","🎤","🚗","✈️","💤","🌿","🍵","🎯","🧃","🎀"];
+const A_EMOJIS = ["🐱","🐻","🐼","🐨","🐸","🦊","🐹","🐯","🦁","🐮","🐷","🐙","🐧","🦆","🐝","🌻","🍀","⭐","🌈","🎸","🍎","🎂","🌙","🦋"];
+const IDLE_STATUSES = ['寝てる','離席'];
+
+// ── ルーム ──
+let room = (location.hash||'').replace('#','').trim();
+if (!room) { room = Math.random().toString(36).slice(2,8); location.hash = '#' + room; }
+document.getElementById('inviteUrl').value = location.href;
+
+// ── ストレージ ──
+const key   = k => `imaco_${room}_${k}`;
+const load  = (k, d) => { try { const v = localStorage.getItem(key(k)); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
+const save  = (k, v) => { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch {} };
+const gload = (k, d) => { try { const v = localStorage.getItem(`imaco_${k}`); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
+const gsave = (k, v) => { try { localStorage.setItem(`imaco_${k}`, JSON.stringify(v)); } catch {} };
+
+// ── 状態 ──
+let myName    = load('myName', '');
+let myAvatar  = load('myAvatar', '🐱');
+let myStatus  = load('myStatus', '');
+let myStatusAt= load('myStatusAt', null);
+let myMemo    = load('myMemo', '');
+let theme     = gload('theme', 'light');
+let sb = null, syncReady = false, realtimeCh = null;
+let lastActivityAt = Date.now();
+let setE = S_EMOJIS[0], selAva = null, pendingImg = null;
+let onboardSelAva = '🐱', onboardPendingImg = null;
+
+// ── テーマ ──
+const applyTheme = () => {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+};
+applyTheme();
+window.toggleTheme = () => { theme = theme === 'dark' ? 'light' : 'dark'; gsave('theme', theme); applyTheme(); };
+
+// ── トースト ──
+let toastTimer;
+const showToast = msg => {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+};
+window.copyInvite = () => {
+  navigator.clipboard?.writeText(location.href).then(() => showToast('招待リンクをコピーしました 🔗'));
+};
+
+// ── オンボーディング絵文字グリッド ──
+const onboardAgrid = document.getElementById('onboardAgrid');
+A_EMOJIS.forEach(e => {
+  const b = document.createElement('button');
+  b.className = 'ap' + (e === '🐱' ? ' sel' : '');
+  b.textContent = e;
+  b.onclick = () => {
+    onboardAgrid.querySelectorAll('.ap').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    onboardSelAva = e; onboardPendingImg = null;
+    const prev = document.getElementById('onboardAvaPreview');
+    prev.textContent = e;
+  };
+  onboardAgrid.appendChild(b);
+});
+
+window.handleOnboardUpload = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    onboardPendingImg = ev.target.result; onboardSelAva = null;
+    onboardAgrid.querySelectorAll('.ap').forEach(x=>x.classList.remove('sel'));
+    const prev = document.getElementById('onboardAvaPreview');
+    prev.innerHTML = `<img src="${onboardPendingImg}" alt="">`;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.finishOnboard = () => {
+  const nameVal = document.getElementById('onboardName').value.trim();
+  if (!nameVal) { document.getElementById('onboardName').focus(); return; }
+  myName   = nameVal;
+  myAvatar = onboardPendingImg || onboardSelAva || '🐱';
+  save('myName', myName); save('myAvatar', myAvatar);
+  document.getElementById('ovOnboard').classList.remove('open');
+  renderMyCard();
+};
+
+// ── 自分のカードを描画 ──
+const renderMyCard = () => {
+  const nameEl = document.getElementById('nameTxtYou');
+  const avaEl  = document.getElementById('avaYou');
+  nameEl.textContent = myName || '—';
+  if (myAvatar && myAvatar.startsWith('data:')) {
+    avaEl.innerHTML = `<img src="${myAvatar}" alt="">`;
+  } else {
+    avaEl.textContent = myAvatar || '🐱';
+  }
+  if (myStatus) {
+    document.getElementById('emYou').textContent = myStatus.e || '—';
+    document.getElementById('lbYou').textContent = myStatus.l || '—';
+    const dot = document.getElementById('dotYou');
+    dot.className = 'dot ' + (IDLE_STATUSES.includes(myStatus.l) ? 'dot-idle' : 'dot-on');
+    document.getElementById('sbtnsYou').querySelectorAll('.sbtn').forEach(b => {
+      b.classList.toggle('on', b.dataset.l === myStatus.l);
+    });
+  }
+  const sinceEl = document.getElementById('sinceYou');
+  if (myStatusAt) {
+    const m = Math.floor((Date.now()-new Date(myStatusAt).getTime())/60000);
+    sinceEl.textContent = m < 1 ? 'たった今' : `${m}分前`;
+  }
+  document.getElementById('memoInp').value = myMemo;
+};
+
+// ── 相手のカードを描画 ──
+const renderThemCard = (data) => {
+  if (!data) return;
+  const nameEl  = document.getElementById('nameTxtThem');
+  const avaEl   = document.getElementById('avaThem');
+  const emEl    = document.getElementById('emThem');
+  const lbEl    = document.getElementById('lbThem');
+  const sinceEl = document.getElementById('sinceThem');
+  const dotEl   = document.getElementById('dotThem');
+
+  if (data.them_name) nameEl.textContent = data.them_name;
+  if (data.them_avatar) {
+    if (data.them_avatar.startsWith('data:')) {
+      avaEl.innerHTML = `<img src="${data.them_avatar}" alt="">`;
+    } else {
+      avaEl.textContent = data.them_avatar;
+    }
+  }
+  if (data.them_status) {
+    try {
+      const s = typeof data.them_status === 'string' ? JSON.parse(data.them_status) : data.them_status;
+      emEl.textContent = s.e || '—';
+      lbEl.textContent = s.l || '—';
+      dotEl.className = 'dot ' + (IDLE_STATUSES.includes(s.l) ? 'dot-idle' : 'dot-on');
+      document.getElementById('sbtnsThem').querySelectorAll('.sbtn').forEach(b => {
+        b.classList.toggle('on', b.dataset.l === s.l);
+      });
+      if (data.them_status_at) {
+        const m = Math.floor((Date.now()-new Date(data.them_status_at).getTime())/60000);
+        sinceEl.textContent = m < 1 ? 'たった今' : `${m}分前`;
+      }
+    } catch {}
+  }
+
+  // presence
+  const myOn   = true;
+  const themOn = data.them_active_at && (Date.now()-new Date(data.them_active_at).getTime()) < 90000;
+  document.getElementById('connCount').textContent = (myOn ? 1 : 0) + (themOn ? 1 : 0) + '/2';
+  if (!themOn) dotEl.className = 'dot dot-off';
+};
+
+// ── ステータス選択 ──
+window.pickStatus = btn => {
+  document.getElementById('sbtnsYou').querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  myStatus = { e: btn.dataset.e, l: btn.dataset.l };
+  myStatusAt = new Date().toISOString();
+  save('myStatus', myStatus); save('myStatusAt', myStatusAt);
+  document.getElementById('emYou').textContent = myStatus.e;
+  document.getElementById('lbYou').textContent = myStatus.l;
+  document.getElementById('sinceYou').textContent = 'たった今';
+  const dot = document.getElementById('dotYou');
+  dot.className = 'dot ' + (IDLE_STATUSES.includes(myStatus.l) ? 'dot-idle' : 'dot-on');
+  if (syncReady) pushMyStatus();
+};
+
+// ── 名前編集 ──
+window.editName = () => {
+  const row = document.getElementById('nameInpYou').previousElementSibling;
+  const inp = document.getElementById('nameInpYou');
+  row.style.display = 'none'; inp.style.display = 'block';
+  inp.value = myName; inp.focus(); inp.select();
+};
+window.saveName = () => {
+  const inp = document.getElementById('nameInpYou');
+  const row = inp.previousElementSibling;
+  const val = inp.value.trim();
+  if (val) { myName = val; save('myName', myName); document.getElementById('nameTxtYou').textContent = myName; }
+  inp.style.display = 'none'; row.style.display = 'inline-flex';
+  if (syncReady) pushMyStatus();
+};
+
+// ── メモ ──
+window.saveMemo = () => {
+  myMemo = document.getElementById('memoInp').value;
+  save('myMemo', myMemo);
+  if (syncReady) pushMyStatus();
+};
+
+// ── アイコン変更グリッド ──
+const buildAGrid = (gridId) => {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  A_EMOJIS.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'ap'; b.textContent = e;
+    b.onclick = () => { grid.querySelectorAll('.ap').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); selAva = e; pendingImg = null; };
+    grid.appendChild(b);
+  });
+};
+buildAGrid('iconAgrid');
+
+window.openIconModal = () => { selAva = null; pendingImg = null; document.getElementById('ovIcon').classList.add('open'); };
+window.closeIcon = () => document.getElementById('ovIcon').classList.remove('open');
+window.handleIconUpload = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { pendingImg = ev.target.result; selAva = null; document.getElementById('iconAgrid').querySelectorAll('.ap').forEach(x=>x.classList.remove('sel')); };
+  reader.readAsDataURL(file);
+};
+window.doIcon = () => {
+  if (pendingImg || selAva) {
+    myAvatar = pendingImg || selAva;
+    save('myAvatar', myAvatar); renderMyCard();
+    if (syncReady) pushMyStatus();
+  }
+  closeIcon();
+};
+
+// ── ステータス追加グリッド ──
+const addEgrid = document.getElementById('addEgrid');
+S_EMOJIS.forEach(e => {
+  const b = document.createElement('button');
+  b.className = 'ep' + (e === setE ? ' sel' : '');
+  b.textContent = e;
+  b.onclick = () => { addEgrid.querySelectorAll('.ep').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); setE = e; };
+  addEgrid.appendChild(b);
+});
+window.openAddModal = () => { document.getElementById('addLbl').value=''; document.getElementById('ovAdd').classList.add('open'); };
+window.closeAdd = () => document.getElementById('ovAdd').classList.remove('open');
+window.doAdd = () => {
+  const lbl = document.getElementById('addLbl').value.trim();
+  if (!lbl) { document.getElementById('addLbl').focus(); return; }
+  const row = document.getElementById('sbtnsYou'), plus = row.querySelector('.sbtn-plus');
+  const btn = document.createElement('button');
+  btn.className = 'sbtn'; btn.dataset.e = setE; btn.dataset.l = lbl;
+  btn.innerHTML = `<span class="se">${setE}</span>${lbl}`;
+  btn.onclick = function(){ window.pickStatus(this); };
+  row.insertBefore(btn, plus);
+  window.pickStatus(btn); closeAdd();
+};
+
+// ── Supabase ──
+window.connectSupabase = async () => {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const anonKey = document.getElementById('cfgKey').value.trim();
+  if (!url || !anonKey) return;
+  gsave('sb_url', url); gsave('sb_key', anonKey);
+  await initSupabase(url, anonKey);
+};
+
+const initSupabase = async (url, anonKey) => {
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    sb = createClient(url, anonKey, { auth: { persistSession: false } });
+    syncReady = true;
+    document.getElementById('cfgStatus').textContent = '✓ 接続中';
+    document.getElementById('cfgStatus').classList.add('ok');
+    document.getElementById('cfgRow').style.display = 'none';
+    await ensureRoom();
+    await pullThemStatus();
+    startRealtime();
+    startHeartbeat();
+    showToast('接続しました ✓');
+  } catch(e) {
+    document.getElementById('cfgStatus').textContent = '接続失敗';
+    console.error(e);
+  }
+};
+
+// ── DBテーブル初期化（なければ作成） ──
+const ensureRoom = async () => {
+  const { data } = await sb.from('imaco_rooms').select('room_id').eq('room_id', room).maybeSingle();
+  if (!data) {
+    await sb.from('imaco_rooms').insert({ room_id: room });
+  }
+  await pushMyStatus();
+};
+
+// ── 自分のステータスをDB送信 ──
+const myRole = () => load('myRole', null) || assignRole();
+const assignRole = () => {
+  // 先に入った方がhost
+  const r = 'user_' + Math.random().toString(36).slice(2,6);
+  save('myRole', r); return r;
+};
+
+const pushMyStatus = async () => {
+  if (!syncReady || !sb) return;
+  const role = myRole();
+  const payload = {
+    room_id: room,
+    [`${role}_name`]: myName,
+    [`${role}_avatar`]: myAvatar,
+    [`${role}_status`]: JSON.stringify(myStatus),
+    [`${role}_status_at`]: myStatusAt,
+    [`${role}_active_at`]: new Date().toISOString(),
+    [`${role}_memo`]: myMemo,
+  };
+  await sb.from('imaco_rooms').upsert(payload, { onConflict: 'room_id' });
+};
+
+// ── 相手のステータスをDB取得 ──
+const pullThemStatus = async () => {
+  if (!syncReady || !sb) return;
+  const { data } = await sb.from('imaco_rooms').select('*').eq('room_id', room).maybeSingle();
+  if (!data) return;
+  const role = myRole();
+  // 自分以外のロールを探す
+  const allRoles = Object.keys(data).filter(k=>k.endsWith('_name') && k !== `${role}_name`).map(k=>k.replace('_name',''));
+  const themRole = allRoles[0];
+  if (!themRole) return;
+  renderThemCard({
+    them_name:      data[`${themRole}_name`],
+    them_avatar:    data[`${themRole}_avatar`],
+    them_status:    data[`${themRole}_status`],
+    them_status_at: data[`${themRole}_status_at`],
+    them_active_at: data[`${themRole}_active_at`],
+  });
+};
+
+// ── リアルタイム購読 ──
+const startRealtime = () => {
+  if (realtimeCh) sb.removeChannel(realtimeCh);
+  realtimeCh = sb.channel('room_'+room)
+    .on('postgres_changes', { event:'*', schema:'public', table:'imaco_rooms', filter:`room_id=eq.${room}` },
+      () => pullThemStatus())
+    .subscribe();
+};
+
+// ── ハートビート（25秒ごと） ──
+const startHeartbeat = () => {
+  const ping = () => { if (syncReady) pushMyStatus().catch(()=>{}); };
+  setInterval(ping, 25000);
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) ping(); });
+  window.addEventListener('focus', ping);
+};
+
+// ── 自動離席 ──
+const IDLE_MS   = 60 * 60 * 1000;  // 1時間で離席
+const SLEEP_MS  = 4  * 60 * 60 * 1000; // さらに3時間で寝てる
+const markActive = () => { lastActivityAt = Date.now(); };
+['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(e=>window.addEventListener(e,markActive,{passive:true}));
+
+setInterval(() => {
+  const el = Date.now() - lastActivityAt;
+  if (el >= SLEEP_MS && myStatus?.l !== '寝てる') {
+    window.pickStatus({ dataset:{e:'🌙',l:'寝てる'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+  } else if (el >= IDLE_MS && myStatus?.l !== '離席' && myStatus?.l !== '寝てる') {
+    window.pickStatus({ dataset:{e:'🌙',l:'離席'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+  }
+}, 5000);
+
+// ── 経過時間の更新 ──
+setInterval(() => {
+  if (myStatusAt) {
+    const m = Math.floor((Date.now()-new Date(myStatusAt).getTime())/60000);
+    document.getElementById('sinceYou').textContent = m < 1 ? 'たった今' : `${m}分前`;
+  }
+}, 15000);
+
+// ── 通知（相手のステータスが変わったら） ──
+let lastThemStatus = null;
+const notifyThemChange = (newStatus) => {
+  if (!newStatus || newStatus === lastThemStatus) return;
+  if (lastThemStatus !== null && 'Notification' in window && Notification.permission === 'granted') {
+    new Notification('imaco', { body: `相手が「${newStatus}」になりました`, icon: '/favicon.ico' });
+  }
+  lastThemStatus = newStatus;
+};
+
+// ── 起動 ──
+const storedUrl = gload('sb_url',''), storedKey = gload('sb_key','');
+if (storedUrl && storedKey) {
+  document.getElementById('cfgUrl').value = storedUrl;
+  document.getElementById('cfgKey').value = storedKey;
+  initSupabase(storedUrl, storedKey);
+}
+
+// オンボーディング済みなら閉じる
+if (myName) {
+  document.getElementById('ovOnboard').classList.remove('open');
+  renderMyCard();
+}
+
+// 通知許可リクエスト
+if ('Notification' in window && Notification.permission === 'default') {
+  setTimeout(() => Notification.requestPermission(), 3000);
+}
+</script>
+</body>
+</html>
