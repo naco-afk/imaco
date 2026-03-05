@@ -793,28 +793,39 @@ const ensureRoom = async () => {
   if (!data) {
     await sb.from('imaco_rooms').insert({ room_id: room });
   }
+  await assignRole();
   await pushMyStatus();
 };
 
-// ── 自分のステータスをDB送信 ──
-const myRole = () => load('myRole', null) || assignRole();
-const assignRole = () => {
-  // 先に入った方がhost
-  const r = 'user_' + Math.random().toString(36).slice(2,6);
-  save('myRole', r); return r;
+// ── ロール（host/guest固定） ──
+// 先にアクセスした方がhost、後からがguest
+const assignRole = async () => {
+  const { data } = await sb.from('imaco_rooms').select('host_name,host_active_at').eq('room_id', room).maybeSingle();
+  // hostがいない、またはhostが90秒以上inactive → host取得
+  const hostActive = data?.host_active_at && (Date.now() - new Date(data.host_active_at).getTime()) < 90000;
+  const hostTaken  = data?.host_name && hostActive;
+  const role = hostTaken ? 'guest' : 'host';
+  save('myRole', role);
+  return role;
+};
+const myRole = async () => {
+  const saved = load('myRole', null);
+  if (saved) return saved;
+  return await assignRole();
 };
 
+// ── 自分のステータスをDB送信 ──
 const pushMyStatus = async () => {
   if (!syncReady || !sb) return;
-  const role = myRole();
+  const role = await myRole();
   const payload = {
     room_id: room,
-    [`${role}_name`]: myName,
-    [`${role}_avatar`]: myAvatar,
-    [`${role}_status`]: JSON.stringify(myStatus),
+    [`${role}_name`]:      myName,
+    [`${role}_avatar`]:    myAvatar,
+    [`${role}_status`]:    JSON.stringify(myStatus),
     [`${role}_status_at`]: myStatusAt,
     [`${role}_active_at`]: new Date().toISOString(),
-    [`${role}_memo`]: myMemo,
+    [`${role}_memo`]:      myMemo,
   };
   await sb.from('imaco_rooms').upsert(payload, { onConflict: 'room_id' });
 };
@@ -824,11 +835,9 @@ const pullThemStatus = async () => {
   if (!syncReady || !sb) return;
   const { data } = await sb.from('imaco_rooms').select('*').eq('room_id', room).maybeSingle();
   if (!data) return;
-  const role = myRole();
-  // 自分以外のロールを探す
-  const allRoles = Object.keys(data).filter(k=>k.endsWith('_name') && k !== `${role}_name`).map(k=>k.replace('_name',''));
-  const themRole = allRoles[0];
-  if (!themRole) return;
+  const role     = await myRole();
+  const themRole = role === 'host' ? 'guest' : 'host';
+  if (!data[`${themRole}_name`]) return;
   renderThemCard({
     them_name:      data[`${themRole}_name`],
     them_avatar:    data[`${themRole}_avatar`],
