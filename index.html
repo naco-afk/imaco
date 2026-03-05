@@ -190,20 +190,7 @@ body {
 .card.them .sbtn, .card.them .sbtn-plus { pointer-events: none; }
 
 /* ── メモ行 ── */
-.memo-row {
-  max-width: 720px; width: 100%;
-  background: var(--card); border: 1.5px solid var(--border);
-  border-radius: 16px; padding: 10px 16px;
-  display: flex; align-items: center; gap: 10px;
-  transition: background .25s, border-color .25s;
-}
-.memo-lbl { font-size: 11px; font-weight: 800; color: var(--sub); white-space: nowrap; }
-.memo-inp {
-  flex: 1; border: none; background: transparent;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  color: var(--ink); outline: none; min-width: 0;
-}
-.memo-inp::placeholder { color: var(--sub); opacity: .5; }
+
 
 /* ── Supabase設定行 ── */
 .cfg-row {
@@ -312,7 +299,7 @@ body {
   transition: all .15s; position: relative; margin-bottom: 10px;
 }
 .upload-area:hover { border-color: var(--ink); background: var(--off); }
-.upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-area input { display: none; }
 .upload-area-txt { font-size: 12px; font-weight: 700; color: var(--sub); }
 .upload-area-txt strong { color: var(--ink); }
 
@@ -455,12 +442,6 @@ body {
   </div>
 </div>
 
-<!-- ひとことメモ -->
-<div class="memo-row">
-  <span class="memo-lbl">ひとこと</span>
-  <input class="memo-inp" id="memoInp" placeholder="今日もよろしく〜 など" maxlength="40"
-    onchange="saveMemo()" onblur="saveMemo()">
-</div>
 
 <!-- 招待リンク -->
 <div class="invite-row">
@@ -515,7 +496,7 @@ body {
 <div class="ov" id="ovIcon" onclick="if(event.target===this)closeIcon()">
   <div class="modal">
     <div class="modal-ttl">🖼 アイコンを変更</div>
-    <div class="upload-area">
+    <div class="upload-area" onclick="document.getElementById('iconFileInp').click()">
       <input type="file" accept="image/*" id="iconFileInp" >
       <div class="upload-area-txt">タップして<strong>写真をアップロード</strong></div>
     </div>
@@ -653,7 +634,7 @@ const renderMyCard = () => {
     const m = Math.floor((Date.now()-new Date(myStatusAt).getTime())/60000);
     sinceEl.textContent = m < 1 ? 'たった今' : `${m}分前`;
   }
-  document.getElementById('memoInp').value = myMemo;
+
 };
 
 // ── 相手のカードを描画 ──
@@ -728,12 +709,7 @@ window.saveName = () => {
   if (syncReady) pushMyStatus();
 };
 
-// ── メモ ──
-window.saveMemo = () => {
-  myMemo = document.getElementById('memoInp').value;
-  save('myMemo', myMemo);
-  if (syncReady) pushMyStatus();
-};
+
 
 // ── アイコン変更グリッド ──
 const buildAGrid = (gridId) => {
@@ -820,10 +796,12 @@ window.connectSupabase = async () => {
   await initSupabase(url, anonKey);
 };
 
+let _supabaseClient = null;
 const initSupabase = async (url, anonKey) => {
   try {
     const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    sb = createClient(url, anonKey, { auth: { persistSession: false } });
+    if (_supabaseClient) { sb = _supabaseClient; }
+    else { _supabaseClient = createClient(url, anonKey, { auth: { persistSession: false } }); sb = _supabaseClient; }
     syncReady = true;
     document.getElementById('cfgStatus').textContent = '✓ 接続中';
     document.getElementById('cfgStatus').classList.add('ok');
@@ -879,7 +857,6 @@ const pushMyStatus = async () => {
     [`${role}_status`]:    JSON.stringify(myStatus),
     [`${role}_status_at`]: myStatusAt,
     [`${role}_active_at`]: new Date().toISOString(),
-    [`${role}_memo`]:      myMemo,
   };
   await sb.from('imaco_rooms').upsert(payload, { onConflict: 'room_id' });
 };
