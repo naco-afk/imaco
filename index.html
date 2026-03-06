@@ -905,15 +905,29 @@ let hiddenSince    = null; // 裏タブになった時刻
 const markActive = () => { lastActivityAt = Date.now(); };
 ['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(e=>window.addEventListener(e,markActive,{passive:true}));
 
+const applyStatus = (e, l) => {
+  myStatus = { e, l };
+  myStatusAt = new Date().toISOString();
+  save('myStatus', myStatus); save('myStatusAt', myStatusAt);
+  document.getElementById('emYou').textContent = e;
+  document.getElementById('lbYou').textContent = l;
+  document.getElementById('sinceYou').textContent = 'たった今';
+  document.getElementById('dotYou').className = 'dot ' + (IDLE_STATUSES.includes(l) ? 'dot-idle' : 'dot-on');
+  document.getElementById('sbtnsYou').querySelectorAll('.sbtn').forEach(b => {
+    b.classList.toggle('on', b.dataset.l === l);
+  });
+  if (syncReady) pushMyStatus();
+};
+
 const setIdle = () => {
   if (myStatus?.l === '離席' || myStatus?.l === '寝てる') return;
-  preIdleStatus = { ...myStatus }; // 離席前を保存
-  window.pickStatus({ dataset:{e:'🌙',l:'離席'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+  preIdleStatus = { ...myStatus };
+  applyStatus('🌙', '離席');
 };
 
 const restoreFromIdle = () => {
   if (preIdleStatus && (myStatus?.l === '離席' || myStatus?.l === '寝てる')) {
-    window.pickStatus({ dataset: preIdleStatus, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+    applyStatus(preIdleStatus.e, preIdleStatus.l);
     preIdleStatus = null;
   }
 };
@@ -938,8 +952,8 @@ setInterval(() => {
   // 表タブで1時間操作なし
   const el = Date.now() - lastActivityAt;
   if (el >= SLEEP_MS && myStatus?.l !== '寝てる') {
-    preIdleStatus = { ...myStatus };
-    window.pickStatus({ dataset:{e:'🌙',l:'寝てる'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+    preIdleStatus = preIdleStatus || { ...myStatus };
+    applyStatus('🌙', '寝てる');
   } else if (el >= IDLE_MS) {
     setIdle();
   }
