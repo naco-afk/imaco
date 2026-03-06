@@ -896,10 +896,10 @@ const startHeartbeat = () => {
 };
 
 // ── 自動離席 ──
-const IDLE_MS      = 60 * 60 * 1000;  // 1時間で離席
-const SLEEP_MS     = 4  * 60 * 60 * 1000; // さらに3時間で寝てる
-const HIDDEN_MS    = 30 * 60 * 1000;  // 裏タブ30分で離席
-let preIdleStatus  = null;
+const IDLE_MS      = 60 * 60 * 1000;
+const SLEEP_MS     = 4  * 60 * 60 * 1000;
+const HIDDEN_MS    = 30 * 60 * 1000;
+let preIdleStatus  = load('preIdleStatus', null); // リロード後も復元
 let hiddenSince    = null;
 
 const applyStatus = (e, l) => {
@@ -919,13 +919,16 @@ const applyStatus = (e, l) => {
 const setIdle = () => {
   if (myStatus?.l === '離席' || myStatus?.l === '寝てる') return;
   preIdleStatus = { ...myStatus };
+  save('preIdleStatus', preIdleStatus); // ローカルストレージに保存
   applyStatus('🌙', '離席');
+};
 };
 
 const restoreFromIdle = () => {
   if (preIdleStatus && (myStatus?.l === '離席' || myStatus?.l === '寝てる')) {
     applyStatus(preIdleStatus.e, preIdleStatus.l);
     preIdleStatus = null;
+    save('preIdleStatus', null); // ローカルストレージからも削除
   }
 };
 
@@ -953,7 +956,7 @@ setInterval(() => {
   if (document.hidden) return;
   const el = Date.now() - lastActivityAt;
   if (el >= SLEEP_MS && myStatus?.l !== '寝てる') {
-    if (!preIdleStatus) preIdleStatus = { ...myStatus };
+    if (!preIdleStatus) { preIdleStatus = { ...myStatus }; save('preIdleStatus', preIdleStatus); }
     applyStatus('🌙', '寝てる');
   } else if (el >= IDLE_MS) {
     setIdle();
