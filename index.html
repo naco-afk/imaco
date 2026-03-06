@@ -537,8 +537,14 @@ const IDLE_STATUSES = ['寝てる','離席'];
 
 // ── ルーム ──
 let room = (location.hash||'').replace('#','').trim();
+const isNewRoom = !room;
 if (!room) { room = Math.random().toString(36).slice(2,8); location.hash = '#' + room; }
 document.getElementById('inviteUrl').value = location.href;
+
+// ルームを作った人はhost確定、リンクから来た人はguest確定（初回のみ）
+if (!load('myRole', null)) {
+  save('myRole', isNewRoom ? 'host' : 'guest');
+}
 
 // ── ストレージ ──
 const key   = k => `imaco_${room}_${k}`;
@@ -832,8 +838,6 @@ const ensureRoom = async () => {
   if (!data) {
     await sb.from('imaco_rooms').insert({ room_id: room });
   }
-  const savedRole = load('myRole', null);
-  if (!savedRole) await assignRole(); // 初回のみロール割り当て
   await pushMyStatus();
 };
 
