@@ -119,7 +119,18 @@ body {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  transition: background .25s, border-color .25s;
+  transition: background .25s, border-color .25s, box-shadow .6s;
+  position: relative;
+}
+.conn-icon.both-online {
+  border-color: var(--green);
+  box-shadow: 0 0 0 0 rgba(94,203,120,.5);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(94,203,120,.5); }
+  50%  { box-shadow: 0 0 0 8px rgba(94,203,120,0); }
+  100% { box-shadow: 0 0 0 0 rgba(94,203,120,0); }
 }
 .conn-count { font-size: 11px; font-weight: 800; color: var(--sub); }
 
@@ -147,6 +158,48 @@ body {
 .dot-on   { background: var(--green); }
 .dot-idle { background: var(--yellow); }
 .dot-off  { background: #888; }
+
+/* ── ZZZ アニメーション ── */
+.zzz-wrap {
+  position: absolute; top: -4px; right: -4px;
+  pointer-events: none; z-index: 10;
+}
+.zzz-wrap span {
+  position: absolute;
+  font-size: 11px; font-weight: 900; color: var(--sub);
+  animation: zzz-float 2.4s ease-in-out infinite;
+  opacity: 0;
+}
+.zzz-wrap span:nth-child(1) { animation-delay: 0s;    font-size: 9px;  right: 0;   top: 0; }
+.zzz-wrap span:nth-child(2) { animation-delay: 0.8s;  font-size: 11px; right: -6px; top: -8px; }
+.zzz-wrap span:nth-child(3) { animation-delay: 1.6s;  font-size: 13px; right: -10px; top: -18px; }
+@keyframes zzz-float {
+  0%   { opacity: 0; transform: translateY(0) scale(.8); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-12px) scale(1); }
+}
+
+/* ── ハート エフェクト ── */
+.heart-particle {
+  position: fixed;
+  pointer-events: none;
+  font-size: 22px;
+  z-index: 999;
+  animation: heart-rise 1.8s ease-out forwards;
+}
+@keyframes heart-rise {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-120px) scale(1.4); }
+}
+
+/* ── ハートボタン ── */
+.heart-btn {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; font-size: 18px;
+  cursor: pointer; opacity: 0.4; transition: opacity .15s, transform .15s;
+  padding: 4px;
+}
+.heart-btn:hover { opacity: 1; transform: scale(1.2); }
 
 .name-wrap { flex: 1; min-width: 0; }
 .name-row  { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
@@ -390,6 +443,7 @@ body {
       <div class="ava-wrap">
         <div class="ava ava-you editable" id="avaYou" onclick="openIconModal()" title="アイコン変更"></div>
         <span class="dot dot-on" id="dotYou"></span>
+        <div class="zzz-wrap" id="zzzYou" style="display:none"><span>z</span><span>z</span><span>Z</span></div>
       </div>
       <div class="name-wrap">
         <div class="name-row" onclick="editName()">
@@ -422,11 +476,13 @@ body {
   </div>
 
   <!-- 相手 -->
-  <div class="card them">
+  <div class="card them" style="position:relative">
+    <button class="heart-btn" id="heartBtn" title="ハートを送る">🤍</button>
     <div class="card-head">
       <div class="ava-wrap">
         <div class="ava ava-them" id="avaThem"></div>
         <span class="dot dot-off" id="dotThem"></span>
+        <div class="zzz-wrap" id="zzzThem" style="display:none"><span>z</span><span>z</span><span>Z</span></div>
       </div>
       <div class="name-wrap">
         <div class="name-row">
@@ -634,6 +690,8 @@ const renderMyCard = () => {
     document.getElementById('sbtnsYou').querySelectorAll('.sbtn').forEach(b => {
       b.classList.toggle('on', b.dataset.l === myStatus.l);
     });
+    // ZZZ
+    document.getElementById('zzzYou').style.display = myStatus.l === '寝てる' ? 'block' : 'none';
   }
   const sinceEl = document.getElementById('sinceYou');
   if (myStatusAt) {
@@ -676,6 +734,8 @@ const renderThemCard = (data) => {
       }
       // 通知
       notifyThemChange(data.them_name || '相手', s.l);
+      // ZZZ
+      document.getElementById('zzzThem').style.display = s.l === '寝てる' ? 'block' : 'none';
     } catch {}
   }
 
@@ -684,6 +744,10 @@ const renderThemCard = (data) => {
   const themOn = data.them_active_at && (Date.now()-new Date(data.them_active_at).getTime()) < 90000;
   document.getElementById('connCount').textContent = (myOn ? 1 : 0) + (themOn ? 1 : 0) + '/2';
   if (!themOn) dotEl.className = 'dot dot-off';
+  // 2人ともオンラインなら脈打つ
+  const connIcon = document.querySelector('.conn-icon');
+  if (themOn) connIcon.classList.add('both-online');
+  else connIcon.classList.remove('both-online');
 };
 
 // ── ステータス選択 ──
@@ -759,6 +823,28 @@ window.handleIconUpload = e => {
 document.getElementById('iconFileInp').addEventListener('change', e => window.handleIconUpload(e));
 document.getElementById('onboardFileInp').addEventListener('change', e => window.handleOnboardUpload(e));
 document.getElementById('onboardAvaPreview').addEventListener('click', () => document.getElementById('onboardFileInp').click());
+
+// ── ハートエフェクト ──
+const launchHearts = (x, y) => {
+  const emojis = ['❤️','🧡','💛','💚','💙','💜','🩷'];
+  for (let i = 0; i < 6; i++) {
+    const el = document.createElement('div');
+    el.className = 'heart-particle';
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    el.style.left = (x + (Math.random() - 0.5) * 60) + 'px';
+    el.style.top  = (y + (Math.random() - 0.5) * 30) + 'px';
+    el.style.animationDelay = (Math.random() * 0.3) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  }
+};
+document.getElementById('heartBtn').addEventListener('click', e => {
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  launchHearts(rect.left + rect.width / 2, rect.top);
+  btn.textContent = '❤️';
+  setTimeout(() => btn.textContent = '🤍', 2000);
+});
 window.doIcon = () => {
   if (pendingImg || selAva) {
     myAvatar = pendingImg || selAva;
