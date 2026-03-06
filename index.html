@@ -832,7 +832,8 @@ const ensureRoom = async () => {
   if (!data) {
     await sb.from('imaco_rooms').insert({ room_id: room });
   }
-  await assignRole();
+  const savedRole = load('myRole', null);
+  if (!savedRole) await assignRole(); // 初回のみロール割り当て
   await pushMyStatus();
 };
 
