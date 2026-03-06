@@ -456,20 +456,6 @@ body {
   <button class="invite-copy" onclick="copyInvite()">リンクをコピー</button>
 </div>
 
-<!-- Supabase設定 -->
-<div class="cfg-row" id="cfgRow">
-  <input class="cfg-inp" id="cfgUrl" placeholder="SUPABASE_URL" autocomplete="off">
-  <input class="cfg-inp" id="cfgKey" placeholder="SUPABASE_ANON_KEY" autocomplete="off">
-  <button class="cfg-btn" onclick="connectSupabase()">接続</button>
-  <span class="cfg-status" id="cfgStatus">未接続</span>
-</div>
-
-<!-- 接続済みバッジ（接続後に表示） -->
-<div class="cfg-connected" id="cfgConnected" style="display:none">
-  <span class="cfg-connected-dot"></span>
-  <span>Supabase 接続済み</span>
-  <button class="cfg-connected-edit" onclick="showCfgRow()">変更</button>
-</div>
 
 <p class="hint" id="hintTxt">URLをコピーして相手に送るとリアルタイム共有できます</p>
 
@@ -481,7 +467,7 @@ body {
   <div class="modal">
     <div class="modal-ttl">👋 はじめまして！</div>
     <div class="onboard-ava-row">
-      <div class="onboard-ava-preview" id="onboardAvaPreview" onclick="document.getElementById('onboardFileInp').click()">🐱
+      <div class="onboard-ava-preview" id="onboardAvaPreview">🐱
         <input type="file" accept="image/*" id="onboardFileInp" style="display:none" >
       </div>
       <div class="onboard-ava-hint">
@@ -688,6 +674,8 @@ const renderThemCard = (data) => {
         const m = Math.floor((Date.now()-new Date(data.them_status_at).getTime())/60000);
         sinceEl.textContent = m < 1 ? 'たった今' : `${m}分前`;
       }
+      // 通知
+      notifyThemChange(data.them_name || '相手', s.l);
     } catch {}
   }
 
@@ -770,6 +758,7 @@ window.handleIconUpload = e => {
 // onchange属性はtype="module"から参照できないので直接登録
 document.getElementById('iconFileInp').addEventListener('change', e => window.handleIconUpload(e));
 document.getElementById('onboardFileInp').addEventListener('change', e => window.handleOnboardUpload(e));
+document.getElementById('onboardAvaPreview').addEventListener('click', () => document.getElementById('onboardFileInp').click());
 window.doIcon = () => {
   if (pendingImg || selAva) {
     myAvatar = pendingImg || selAva;
@@ -803,18 +792,6 @@ window.doAdd = () => {
 };
 
 // ── Supabase ──
-window.showCfgRow = () => {
-  document.getElementById('cfgRow').style.display = 'flex';
-  document.getElementById('cfgConnected').style.display = 'none';
-};
-
-window.connectSupabase = async () => {
-  const url = document.getElementById('cfgUrl').value.trim();
-  const anonKey = document.getElementById('cfgKey').value.trim();
-  if (!url || !anonKey) return;
-  gsave('sb_url', url); gsave('sb_key', anonKey);
-  await initSupabase(url, anonKey);
-};
 
 let _supabaseClient = null;
 const initSupabase = async (url, anonKey) => {
@@ -823,18 +800,12 @@ const initSupabase = async (url, anonKey) => {
     if (_supabaseClient) { sb = _supabaseClient; }
     else { _supabaseClient = createClient(url, anonKey, { auth: { persistSession: false } }); sb = _supabaseClient; }
     syncReady = true;
-    document.getElementById('cfgStatus').textContent = '✓ 接続中';
-    document.getElementById('cfgStatus').classList.add('ok');
-    document.getElementById('cfgBtn') && (document.getElementById('cfgBtn').textContent = '再接続');
-    document.getElementById('cfgRow').style.display = 'none';
-    document.getElementById('cfgConnected').style.display = 'flex';
     await ensureRoom();
     await pullThemStatus();
     startRealtime();
     startHeartbeat();
     showToast('接続しました ✓');
   } catch(e) {
-    document.getElementById('cfgStatus').textContent = '接続失敗';
     console.error(e);
   }
 };
@@ -991,24 +962,24 @@ setInterval(() => {
 
 // ── 通知（相手のステータスが変わったら） ──
 let lastThemStatus = null;
-const notifyThemChange = (newStatus) => {
+const notifyThemChange = (name, newStatus) => {
   if (!newStatus || newStatus === lastThemStatus) return;
   if (lastThemStatus !== null && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification('imaco', { body: `相手が「${newStatus}」になりました`, icon: '/favicon.ico' });
+    new Notification('imaco', {
+      body: `${name}が「${newStatus}」になりました`,
+      icon: './icon-192.png'
+    });
   }
   lastThemStatus = newStatus;
 };
 
 // ── 起動 ──
-// 古いキー（naco-timerと競合するもの）をクリア
 ['SUPABASE_ANON_KEY','SUPABASE_KEY','SUPABASE_REMEMBER_KEY','SUPABASE_URL'].forEach(k => localStorage.removeItem(k));
 
-const storedUrl = gload('sb_url',''), storedKey = gload('sb_key','');
-if (storedUrl && storedKey) {
-  document.getElementById('cfgUrl').value = storedUrl;
-  document.getElementById('cfgKey').value = storedKey;
-  initSupabase(storedUrl, storedKey);
-}
+// Supabase自動接続（キー埋め込み済み）
+const SB_URL = 'https://wswqiylhtkgpgfskdatg.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FpeWxodGtncGdmc2tkYXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1OTg5MDMsImV4cCI6MjA4ODE3NDkwM30.vHYcuDQ7sASf3_RYXnd2PdiercAxTV0VmnQYR2BPZhg';
+initSupabase(SB_URL, SB_KEY);
 
 // オンボーディング済みなら閉じる
 if (myName) {
