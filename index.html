@@ -541,17 +541,24 @@ const isNewRoom = !room;
 if (!room) { room = Math.random().toString(36).slice(2,8); location.hash = '#' + room; }
 document.getElementById('inviteUrl').value = location.href;
 
-// ルームを作った人はhost確定、リンクから来た人はguest確定（初回のみ）
-if (!load('myRole', null)) {
-  save('myRole', isNewRoom ? 'host' : 'guest');
-}
-
 // ── ストレージ ──
 const key   = k => `imaco_${room}_${k}`;
 const load  = (k, d) => { try { const v = localStorage.getItem(key(k)); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
 const save  = (k, v) => { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch {} };
 const gload = (k, d) => { try { const v = localStorage.getItem(`imaco_global_${k}`); return v !== null ? JSON.parse(v) : d; } catch { return d; } };
 const gsave = (k, v) => { try { localStorage.setItem(`imaco_global_${k}`, JSON.stringify(v)); } catch {} };
+
+// 一回だけmyRoleを強制リセット（v2移行）
+const ROLE_VERSION = 'v2';
+if (gload('roleVersion', '') !== ROLE_VERSION) {
+  save('myRole', null);
+  gsave('roleVersion', ROLE_VERSION);
+}
+
+// ルームを作った人はhost確定、リンクから来た人はguest確定（初回のみ）
+if (!load('myRole', null)) {
+  save('myRole', isNewRoom ? 'host' : 'guest');
+}
 
 // ── 状態 ──
 let myName    = load('myName', '');
