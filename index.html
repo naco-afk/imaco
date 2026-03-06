@@ -919,9 +919,8 @@ const applyStatus = (e, l) => {
 const setIdle = () => {
   if (myStatus?.l === '離席' || myStatus?.l === '寝てる') return;
   preIdleStatus = { ...myStatus };
-  save('preIdleStatus', preIdleStatus); // ローカルストレージに保存
+  save('preIdleStatus', preIdleStatus);
   applyStatus('🌙', '離席');
-};
 };
 
 const restoreFromIdle = () => {
