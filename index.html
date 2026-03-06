@@ -825,8 +825,7 @@ document.getElementById('onboardFileInp').addEventListener('change', e => window
 document.getElementById('onboardAvaPreview').addEventListener('click', () => document.getElementById('onboardFileInp').click());
 
 // ── ハートエフェクト ──
-const launchHearts = (x, y) => {
-  const emojis = ['❤️','🧡','💛','💚','💙','💜','🩷'];
+const launchHearts = (x, y, emojis = ['❤️','🧡','💛','💚','💙','💜','🩷']) => {
   for (let i = 0; i < 6; i++) {
     const el = document.createElement('div');
     el.className = 'heart-particle';
@@ -838,12 +837,49 @@ const launchHearts = (x, y) => {
     setTimeout(() => el.remove(), 2000);
   }
 };
-document.getElementById('heartBtn').addEventListener('click', e => {
-  const btn = e.currentTarget;
-  const rect = btn.getBoundingClientRect();
-  launchHearts(rect.left + rect.width / 2, rect.top);
-  btn.textContent = '❤️';
-  setTimeout(() => btn.textContent = '🤍', 2000);
+
+// 「待ってるよ」をDBに送信
+const sendWaiting = async () => {
+  if (!syncReady || !sb) return;
+  const role = await myRole();
+  const themRole = role === 'host' ? 'guest' : 'host';
+  await sb.from('imaco_rooms').upsert({
+    room_id: room,
+    [`${themRole}_waiting_at`]: new Date().toISOString(),
+  }, { onConflict: 'room_id' });
+};
+
+// 「待ってるよ」を受け取ったときの演出
+const showWaiting = () => {
+  const rect = document.querySelector('.card.you').getBoundingClientRect();
+  launchHearts(rect.left + rect.width / 2, rect.top + rect.height / 2, ['💭','💭','💭','🥺']);
+  showToast('待ってるよ… 💭');
+};
+
+// ハートボタン：タップでハート、長押しで「待ってるよ」
+const heartBtn = document.getElementById('heartBtn');
+let holdTimer = null;
+heartBtn.addEventListener('pointerdown', e => {
+  holdTimer = setTimeout(async () => {
+    holdTimer = null;
+    heartBtn.textContent = '💭';
+    await sendWaiting();
+    showToast('「待ってるよ」を送りました 💭');
+    setTimeout(() => heartBtn.textContent = '🤍', 2000);
+  }, 600);
+});
+heartBtn.addEventListener('pointerup', e => {
+  if (holdTimer) {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    const rect = heartBtn.getBoundingClientRect();
+    launchHearts(rect.left + rect.width / 2, rect.top);
+    heartBtn.textContent = '❤️';
+    setTimeout(() => heartBtn.textContent = '🤍', 2000);
+  }
+});
+heartBtn.addEventListener('pointerleave', () => {
+  if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
 });
 window.doIcon = () => {
   if (pendingImg || selAva) {
@@ -945,6 +981,15 @@ const pullThemStatus = async () => {
   const role     = await myRole();
   const themRole = role === 'host' ? 'guest' : 'host';
   if (!data[`${themRole}_name`]) return;
+  // 「待ってるよ」チェック
+  const waitingAt = data[`${role}_waiting_at`]; // 自分宛のwaiting
+  const lastWaiting = load('lastWaitingAt', null);
+  if (waitingAt && waitingAt !== lastWaiting) {
+    save('lastWaitingAt', waitingAt);
+    setTimeout(showWaiting, 300);
+    // 受け取ったらDBをクリア
+    sb.from('imaco_rooms').upsert({ room_id: room, [`${role}_waiting_at`]: null }, { onConflict: 'room_id' });
+  }
   renderThemCard({
     them_name:      data[`${themRole}_name`],
     them_avatar:    data[`${themRole}_avatar`],
