@@ -899,11 +899,8 @@ const startHeartbeat = () => {
 const IDLE_MS      = 60 * 60 * 1000;  // 1時間で離席
 const SLEEP_MS     = 4  * 60 * 60 * 1000; // さらに3時間で寝てる
 const HIDDEN_MS    = 30 * 60 * 1000;  // 裏タブ30分で離席
-let preIdleStatus  = null; // 離席前のステータスを保存
-let hiddenSince    = null; // 裏タブになった時刻
-
-const markActive = () => { lastActivityAt = Date.now(); };
-['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(e=>window.addEventListener(e,markActive,{passive:true}));
+let preIdleStatus  = null;
+let hiddenSince    = null;
 
 const applyStatus = (e, l) => {
   myStatus = { e, l };
@@ -932,27 +929,31 @@ const restoreFromIdle = () => {
   }
 };
 
+const markActive = () => {
+  lastActivityAt = Date.now();
+  restoreFromIdle();
+};
+['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(e=>window.addEventListener(e,markActive,{passive:true}));
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     hiddenSince = Date.now();
   } else {
     hiddenSince = null;
     lastActivityAt = Date.now();
-    restoreFromIdle(); // 表に戻ったら即復帰
+    restoreFromIdle();
   }
 });
 
 setInterval(() => {
-  // 裏タブ30分で離席
   if (document.hidden && hiddenSince && (Date.now() - hiddenSince) >= HIDDEN_MS) {
     setIdle();
     return;
   }
   if (document.hidden) return;
-  // 表タブで1時間操作なし
   const el = Date.now() - lastActivityAt;
   if (el >= SLEEP_MS && myStatus?.l !== '寝てる') {
-    preIdleStatus = preIdleStatus || { ...myStatus };
+    if (!preIdleStatus) preIdleStatus = { ...myStatus };
     applyStatus('🌙', '寝てる');
   } else if (el >= IDLE_MS) {
     setIdle();
