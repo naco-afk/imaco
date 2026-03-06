@@ -896,17 +896,52 @@ const startHeartbeat = () => {
 };
 
 // ── 自動離席 ──
-const IDLE_MS   = 60 * 60 * 1000;  // 1時間で離席
-const SLEEP_MS  = 4  * 60 * 60 * 1000; // さらに3時間で寝てる
+const IDLE_MS      = 60 * 60 * 1000;  // 1時間で離席
+const SLEEP_MS     = 4  * 60 * 60 * 1000; // さらに3時間で寝てる
+const HIDDEN_MS    = 30 * 60 * 1000;  // 裏タブ30分で離席
+let preIdleStatus  = null; // 離席前のステータスを保存
+let hiddenSince    = null; // 裏タブになった時刻
+
 const markActive = () => { lastActivityAt = Date.now(); };
 ['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(e=>window.addEventListener(e,markActive,{passive:true}));
 
+const setIdle = () => {
+  if (myStatus?.l === '離席' || myStatus?.l === '寝てる') return;
+  preIdleStatus = { ...myStatus }; // 離席前を保存
+  window.pickStatus({ dataset:{e:'🌙',l:'離席'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+};
+
+const restoreFromIdle = () => {
+  if (preIdleStatus && (myStatus?.l === '離席' || myStatus?.l === '寝てる')) {
+    window.pickStatus({ dataset: preIdleStatus, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+    preIdleStatus = null;
+  }
+};
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    hiddenSince = Date.now();
+  } else {
+    hiddenSince = null;
+    lastActivityAt = Date.now();
+    restoreFromIdle(); // 表に戻ったら即復帰
+  }
+});
+
 setInterval(() => {
+  // 裏タブ30分で離席
+  if (document.hidden && hiddenSince && (Date.now() - hiddenSince) >= HIDDEN_MS) {
+    setIdle();
+    return;
+  }
+  if (document.hidden) return;
+  // 表タブで1時間操作なし
   const el = Date.now() - lastActivityAt;
   if (el >= SLEEP_MS && myStatus?.l !== '寝てる') {
+    preIdleStatus = { ...myStatus };
     window.pickStatus({ dataset:{e:'🌙',l:'寝てる'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
-  } else if (el >= IDLE_MS && myStatus?.l !== '離席' && myStatus?.l !== '寝てる') {
-    window.pickStatus({ dataset:{e:'🌙',l:'離席'}, classList:{toggle:()=>{},add:()=>{},remove:()=>{}}, closest:()=>null });
+  } else if (el >= IDLE_MS) {
+    setIdle();
   }
 }, 5000);
 
